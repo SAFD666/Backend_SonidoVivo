@@ -22,23 +22,27 @@ public class ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final MarcaService marcaService;
 
-    public ProductoService(ProductoRepository productoRepository, CategoriaRepository categoriaRepository) {
+    public ProductoService(ProductoRepository productoRepository, CategoriaRepository categoriaRepository,
+                           MarcaService marcaService) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
+        this.marcaService = marcaService;
     }
 
-    // Lista publica con filtros opcionales: categoria (por nombre), solo ofertas y busqueda por texto.
+    // Lista publica con filtros opcionales: categoria (por nombre o slug), solo ofertas y busqueda por texto.
     @Transactional(readOnly = true)
     public List<ProductoResponse> listar(String categoria, Boolean soloOfertas, String texto) {
         String q = texto == null ? "" : texto.trim().toLowerCase(Locale.ROOT);
         return productoRepository.findByActivoTrueOrderByCodigoAsc().stream()
                 .filter(p -> categoria == null || categoria.isBlank()
-                        || p.getCategoria().getNombre().equalsIgnoreCase(categoria.trim()))
+                        || p.getCategoria().getNombre().equalsIgnoreCase(categoria.trim())
+                        || p.getCategoria().getSlug().equals(categoria.trim()))
                 .filter(p -> soloOfertas == null || !soloOfertas || p.isEsOferta())
                 .filter(p -> q.isEmpty()
                         || p.getNombre().toLowerCase(Locale.ROOT).contains(q)
-                        || p.getMarca().toLowerCase(Locale.ROOT).contains(q)
+                        || p.getMarca().getNombre().toLowerCase(Locale.ROOT).contains(q)
                         || (p.getModelo() != null && p.getModelo().toLowerCase(Locale.ROOT).contains(q))
                         || p.getCodigo().toLowerCase(Locale.ROOT).contains(q))
                 .map(ProductoResponse::desde)
@@ -93,7 +97,8 @@ public class ProductoService {
 
     private void copiarDatos(Producto p, ProductoRequest req, Categoria categoria) {
         p.setNombre(req.nombre().trim());
-        p.setMarca(req.marca().trim());
+        // La marca llega como texto; si no existe en la tabla marca, se crea (etapa 1 del DER).
+        p.setMarca(marcaService.obtenerOCrear(req.marca()));
         p.setModelo(req.modelo() == null ? null : req.modelo().trim());
         p.setDescripcion(req.descripcion() == null ? null : req.descripcion().trim());
         p.setPrecio(req.precio());

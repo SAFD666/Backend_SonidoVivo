@@ -28,7 +28,7 @@ import java.util.List;
  * Configuración de Spring Security:
  *  - API sin sesión de servidor (STATELESS): cada solicitud trae su JWT.
  *  - CSRF desactivado porque el token viaja en el header Authorization, no en una cookie.
- *  - Rutas públicas: login, registro, lectura del catálogo y Swagger. Todo lo demás requiere token.
+ *  - Rutas públicas: login, registro, lectura del catálogo, ubicaciones y Swagger. Todo lo demás requiere token.
  *  - Los permisos por rol se aplican en cada controlador con @PreAuthorize (gracias a @EnableMethodSecurity).
  */
 @Configuration
@@ -60,8 +60,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
-                        // Catálogo y opciones del checkout: lectura pública (el frontend las muestra sin iniciar sesión).
-                        .requestMatchers(HttpMethod.GET, "/api/v1/productos/**", "/api/v1/categorias/**", "/api/v1/pedidos/opciones").permitAll()
+                        // Catálogo, ubicaciones y opciones del checkout: lectura pública (el frontend las muestra sin iniciar sesión).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/productos/**", "/api/v1/categorias/**", "/api/v1/marcas/**",
+                                "/api/v1/regiones/**", "/api/v1/pedidos/opciones").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(entryPoint)

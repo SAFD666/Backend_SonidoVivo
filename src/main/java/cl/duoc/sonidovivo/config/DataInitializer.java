@@ -2,6 +2,10 @@ package cl.duoc.sonidovivo.config;
 
 import cl.duoc.sonidovivo.model.*;
 import cl.duoc.sonidovivo.repository.*;
+import cl.duoc.sonidovivo.service.CatalogoPedidoService;
+import cl.duoc.sonidovivo.service.MarcaService;
+import cl.duoc.sonidovivo.service.PedidoService;
+import cl.duoc.sonidovivo.service.UbicacionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -23,9 +27,11 @@ import java.util.Map;
 /**
  * Carga los datos iniciales del frontend SOLO si faltan (no duplica nada al reiniciar):
  *  1. Los tres roles.
- *  2. Las 9 categorías y los 50 productos de src/data (archivos en resources/seed).
- *  3. Cuentas de demostración (las mismas del frontend) si se definió DEMO_PASSWORD.
- *  4. Los 2 pedidos de ejemplo del cliente de prueba, si todavía no hay pedidos.
+ *  2. Estados, tipos de entrega y métodos de pago (tablas de catálogo del DER).
+ *  3. Las 9 categorías, las marcas y los 50 productos de src/data (archivos en resources/seed).
+ *  4. Cuentas de demostración (las mismas del frontend) si se definió DEMO_PASSWORD.
+ *  5. Los 2 pedidos de ejemplo del cliente de prueba, con su dirección en la tabla direccion.
+ * Las regiones y comunas las carga antes UbicacionInitializer.
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -51,12 +57,17 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final String demoPassword;
+    private final MarcaService marcaService;
+    private final CatalogoPedidoService catalogoPedido;
+    private final UbicacionService ubicacionService;
 
     public DataInitializer(RolRepository rolRepository, UsuarioRepository usuarioRepository,
                            CategoriaRepository categoriaRepository, ProductoRepository productoRepository,
                            PedidoRepository pedidoRepository, PasswordEncoder passwordEncoder,
                            ObjectMapper objectMapper,
-                           @Value("${app.seed.demo-password:}") String demoPassword) {
+                           @Value("${app.seed.demo-password:}") String demoPassword,
+                           MarcaService marcaService, CatalogoPedidoService catalogoPedido,
+                           UbicacionService ubicacionService) {
         this.rolRepository = rolRepository;
         this.usuarioRepository = usuarioRepository;
         this.categoriaRepository = categoriaRepository;
@@ -65,6 +76,9 @@ public class DataInitializer implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
         this.demoPassword = demoPassword;
+        this.marcaService = marcaService;
+        this.catalogoPedido = catalogoPedido;
+        this.ubicacionService = ubicacionService;
     }
 
     @Override
@@ -74,6 +88,7 @@ public class DataInitializer implements CommandLineRunner {
         crearRolSiFalta(NombreRol.VENDEDOR, "Gestiona productos, categorías, stock y estados de pedidos");
         crearRolSiFalta(NombreRol.CLIENTE, "Compra productos y ve solo sus pedidos");
 
+        catalogoPedido.cargarSiFalta();
         cargarCategorias();
         cargarProductos();
 
@@ -125,7 +140,7 @@ public class DataInitializer implements CommandLineRunner {
             Producto p = new Producto();
             p.setCodigo(s.codigo());
             p.setNombre(s.nombre());
-            p.setMarca(s.marca());
+            p.setMarca(marcaService.obtenerOCrear(s.marca()));
             p.setModelo(s.modelo());
             p.setDescripcion(s.descripcion());
             p.setPrecio(s.precio());
@@ -163,16 +178,18 @@ public class DataInitializer implements CommandLineRunner {
                 pedido.agregarDetalle(d);
                 total += d.getSubtotal();
             }
+            TipoEntrega tipo = catalogoPedido.tipoEntrega(s.tipoEntrega());
             pedido.setCodigo(s.id());
             pedido.setFecha(s.fecha());
             pedido.setUsuario(cliente);
             pedido.setClienteCorreo(s.clienteCorreo());
             pedido.setClienteNombre(s.clienteNombre());
-            pedido.setDireccion(s.direccion());
+            // Retiro en tienda no lleva dirección; los despachos la guardan en la tabla direccion
+            pedido.setDireccion(PedidoService.esRetiro(tipo) ? null : ubicacionService.direccionDesdeTexto(cliente, s.direccion()));
             pedido.setTelefono(s.telefono());
-            pedido.setTipoEntrega(s.tipoEntrega());
-            pedido.setMetodoPago(OpcionesPedido.METODOS_PAGO.get(0));
-            pedido.setEstado(EstadoPedido.desdeTexto(s.estado()));
+            pedido.setTipoEntrega(tipo);
+            pedido.setMetodoPago(catalogoPedido.metodoPago(null));
+            pedido.setEstado(catalogoPedido.estado(EstadoPedido.desdeTexto(s.estado())));
             pedido.setTotal(total);
             pedidoRepository.save(pedido);
         }

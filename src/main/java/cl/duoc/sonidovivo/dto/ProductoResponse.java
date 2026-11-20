@@ -18,7 +18,7 @@ public record ProductoResponse(
 ) {
     public static ProductoResponse desde(Producto p) {
         return new ProductoResponse(
-                p.getCodigo(), p.getCodigo(), p.getNombre(), p.getMarca(), p.getModelo(),
+                p.getCodigo(), p.getCodigo(), p.getNombre(), p.getMarca().getNombre(), p.getModelo(),
                 p.getCategoria().getNombre(), p.getStock(), p.getPrecio(),
                 p.getImagen(), p.getDescripcion(), p.isEsOferta());
     }

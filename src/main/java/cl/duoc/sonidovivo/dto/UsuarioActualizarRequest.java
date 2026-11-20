@@ -20,10 +20,6 @@ public record UsuarioActualizarRequest(
         @Size(min = 6, max = 72, message = "La contraseña debe tener entre 6 y 72 caracteres")
         String password,
 
-        @Schema(example = "Av. Libertad 450, Viña del Mar")
-        @Size(max = 200)
-        String direccion,
-
         @Schema(example = "Vendedor", description = "Solo Administrador")
         NombreRol rol,
 
