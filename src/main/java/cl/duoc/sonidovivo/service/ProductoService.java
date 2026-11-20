@@ -31,13 +31,14 @@ public class ProductoService {
         this.marcaService = marcaService;
     }
 
-    // Lista publica con filtros opcionales: categoria (por nombre), solo ofertas y busqueda por texto.
+    // Lista publica con filtros opcionales: categoria (por nombre o slug), solo ofertas y busqueda por texto.
     @Transactional(readOnly = true)
     public List<ProductoResponse> listar(String categoria, Boolean soloOfertas, String texto) {
         String q = texto == null ? "" : texto.trim().toLowerCase(Locale.ROOT);
         return productoRepository.findByActivoTrueOrderByCodigoAsc().stream()
                 .filter(p -> categoria == null || categoria.isBlank()
-                        || p.getCategoria().getNombre().equalsIgnoreCase(categoria.trim()))
+                        || p.getCategoria().getNombre().equalsIgnoreCase(categoria.trim())
+                        || p.getCategoria().getSlug().equals(categoria.trim()))
                 .filter(p -> soloOfertas == null || !soloOfertas || p.isEsOferta())
                 .filter(p -> q.isEmpty()
                         || p.getNombre().toLowerCase(Locale.ROOT).contains(q)
@@ -96,6 +97,7 @@ public class ProductoService {
 
     private void copiarDatos(Producto p, ProductoRequest req, Categoria categoria) {
         p.setNombre(req.nombre().trim());
+        // La marca llega como texto; si no existe en la tabla marca, se crea (etapa 1 del DER).
         p.setMarca(marcaService.obtenerOCrear(req.marca()));
         p.setModelo(req.modelo() == null ? null : req.modelo().trim());
         p.setDescripcion(req.descripcion() == null ? null : req.descripcion().trim());

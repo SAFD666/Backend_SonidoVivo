@@ -2,6 +2,8 @@ package cl.duoc.sonidovivo.config;
 
 import cl.duoc.sonidovivo.model.*;
 import cl.duoc.sonidovivo.repository.*;
+import cl.duoc.sonidovivo.service.CatalogoPedidoService;
+import cl.duoc.sonidovivo.service.MarcaService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -12,7 +14,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import cl.duoc.sonidovivo.service.MarcaService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,9 +25,10 @@ import java.util.Map;
 /**
  * Carga los datos iniciales del frontend SOLO si faltan (no duplica nada al reiniciar):
  *  1. Los tres roles.
- *  2. Las 9 categorías y los 50 productos de src/data (archivos en resources/seed).
- *  3. Cuentas de demostración (las mismas del frontend) si se definió DEMO_PASSWORD.
- *  4. Los 2 pedidos de ejemplo del cliente de prueba, si todavía no hay pedidos.
+ *  2. Estados, tipos de entrega y métodos de pago (tablas de catálogo del DER).
+ *  3. Las 9 categorías, las marcas y los 50 productos de src/data (archivos en resources/seed).
+ *  4. Cuentas de demostración (las mismas del frontend) si se definió DEMO_PASSWORD.
+ *  5. Los 2 pedidos de ejemplo del cliente de prueba, si todavía no hay pedidos.
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -53,13 +55,14 @@ public class DataInitializer implements CommandLineRunner {
     private final ObjectMapper objectMapper;
     private final String demoPassword;
     private final MarcaService marcaService;
+    private final CatalogoPedidoService catalogoPedido;
 
     public DataInitializer(RolRepository rolRepository, UsuarioRepository usuarioRepository,
                            CategoriaRepository categoriaRepository, ProductoRepository productoRepository,
                            PedidoRepository pedidoRepository, PasswordEncoder passwordEncoder,
                            ObjectMapper objectMapper,
-                            @Value("${app.seed.demo-password:}") String demoPassword,
-                           MarcaService marcaService) {
+                           @Value("${app.seed.demo-password:}") String demoPassword,
+                           MarcaService marcaService, CatalogoPedidoService catalogoPedido) {
         this.rolRepository = rolRepository;
         this.usuarioRepository = usuarioRepository;
         this.categoriaRepository = categoriaRepository;
@@ -69,6 +72,7 @@ public class DataInitializer implements CommandLineRunner {
         this.objectMapper = objectMapper;
         this.demoPassword = demoPassword;
         this.marcaService = marcaService;
+        this.catalogoPedido = catalogoPedido;
     }
 
     @Override
@@ -78,6 +82,7 @@ public class DataInitializer implements CommandLineRunner {
         crearRolSiFalta(NombreRol.VENDEDOR, "Gestiona productos, categorías, stock y estados de pedidos");
         crearRolSiFalta(NombreRol.CLIENTE, "Compra productos y ve solo sus pedidos");
 
+        catalogoPedido.cargarSiFalta();
         cargarCategorias();
         cargarProductos();
 
@@ -174,9 +179,9 @@ public class DataInitializer implements CommandLineRunner {
             pedido.setClienteNombre(s.clienteNombre());
             pedido.setDireccion(s.direccion());
             pedido.setTelefono(s.telefono());
-            pedido.setTipoEntrega(s.tipoEntrega());
-            pedido.setMetodoPago(OpcionesPedido.METODOS_PAGO.get(0));
-            pedido.setEstado(EstadoPedido.desdeTexto(s.estado()));
+            pedido.setTipoEntrega(catalogoPedido.tipoEntrega(s.tipoEntrega()));
+            pedido.setMetodoPago(catalogoPedido.metodoPago(null));
+            pedido.setEstado(catalogoPedido.estado(EstadoPedido.desdeTexto(s.estado())));
             pedido.setTotal(total);
             pedidoRepository.save(pedido);
         }

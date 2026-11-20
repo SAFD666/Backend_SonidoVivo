@@ -6,7 +6,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-// Tabla "pedido": almacena los datos del pedido del frontend (fecha, cliente, dirección, teléfono, tipo de entrega, estado, total e items) calculando el total en el servidor.
+// Tabla "pedido": datos del pedido del frontend (fecha, cliente, dirección, teléfono, total e items).
+// Estado, tipo de entrega y método de pago son claves foráneas a sus tablas del DER.
 @Entity
 @Table(name = "pedido", uniqueConstraints = @UniqueConstraint(name = "uk_pedido_codigo", columnNames = "codigo"))
 public class Pedido {
@@ -38,15 +39,17 @@ public class Pedido {
     @Column(nullable = false, length = 200)
     private String direccion;
 
-    @Column(name = "tipo_entrega", nullable = false, length = 60)
-    private String tipoEntrega;
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "id_tipo_entrega", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_tipo_entrega"))
+    private TipoEntrega tipoEntrega;
 
-    @Column(name = "metodo_pago", nullable = false, length = 40)
-    private String metodoPago;
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "id_metodo_pago", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_metodo_pago"))
+    private MetodoPago metodoPago;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private EstadoPedido estado = EstadoPedido.EN_PREPARACION;
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "id_estado", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_estado"))
+    private Estado estado;
 
     @Column(nullable = false)
     private int total;
@@ -74,12 +77,17 @@ public class Pedido {
     public void setTelefono(String telefono) { this.telefono = telefono; }
     public String getDireccion() { return direccion; }
     public void setDireccion(String direccion) { this.direccion = direccion; }
-    public String getTipoEntrega() { return tipoEntrega; }
-    public void setTipoEntrega(String tipoEntrega) { this.tipoEntrega = tipoEntrega; }
-    public String getMetodoPago() { return metodoPago; }
-    public void setMetodoPago(String metodoPago) { this.metodoPago = metodoPago; }
-    public EstadoPedido getEstado() { return estado; }
-    public void setEstado(EstadoPedido estado) { this.estado = estado; }
+
+    // Hacia afuera se siguen entregando como texto, igual que antes (el frontend no nota el cambio)
+    public String getTipoEntrega() { return tipoEntrega.getNombre(); }
+    public void setTipoEntrega(TipoEntrega tipoEntrega) { this.tipoEntrega = tipoEntrega; }
+    public String getMetodoPago() { return metodoPago.getNombre(); }
+    public void setMetodoPago(MetodoPago metodoPago) { this.metodoPago = metodoPago; }
+
+    // El estado se entrega como el enum de siempre, así las reglas de PedidoService no cambian
+    public EstadoPedido getEstado() { return EstadoPedido.desdeTexto(estado.getNombre()); }
+    public void setEstado(Estado estado) { this.estado = estado; }
+
     public int getTotal() { return total; }
     public void setTotal(int total) { this.total = total; }
     public List<DetallePedido> getDetalles() { return detalles; }

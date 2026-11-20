@@ -5,7 +5,6 @@ import cl.duoc.sonidovivo.dto.PedidoRequest;
 import cl.duoc.sonidovivo.dto.PedidoResponse;
 import cl.duoc.sonidovivo.exception.ConflictoException;
 import cl.duoc.sonidovivo.exception.RecursoNoEncontradoException;
-import cl.duoc.sonidovivo.exception.SolicitudInvalidaException;
 import cl.duoc.sonidovivo.model.*;
 import cl.duoc.sonidovivo.repository.PedidoRepository;
 import cl.duoc.sonidovivo.repository.ProductoRepository;
@@ -26,6 +25,7 @@ import java.util.stream.Collectors;
 // Regla de stock: no supera lo disponible (409) y bloquea filas (SELECT ... FOR UPDATE) contra compras simultaneas.
 // Al confirmar se descuenta el stock y al cancelar se devuelve.
 // Un pedido cancelado no puede cambiar a otro estado (409) porque su stock ya fue devuelto.
+// Estado, tipo de entrega y método de pago se leen de sus tablas (CatalogoPedidoService).
 @Service
 public class PedidoService {
 
@@ -34,25 +34,25 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CatalogoPedidoService catalogo;
 
     public PedidoService(PedidoRepository pedidoRepository, ProductoRepository productoRepository,
-                         UsuarioRepository usuarioRepository) {
+                         UsuarioRepository usuarioRepository, CatalogoPedidoService catalogo) {
         this.pedidoRepository = pedidoRepository;
         this.productoRepository = productoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.catalogo = catalogo;
     }
 
+    @Transactional(readOnly = true)
     public OpcionesPedidoResponse opciones() {
-        return new OpcionesPedidoResponse(
-                OpcionesPedido.TIPOS_ENTREGA,
-                OpcionesPedido.METODOS_PAGO,
-                Arrays.stream(EstadoPedido.values()).map(EstadoPedido::getEtiqueta).toList());
+        return new OpcionesPedidoResponse(catalogo.tiposEntrega(), catalogo.metodosPago(), catalogo.estados());
     }
 
     @Transactional
     public PedidoResponse crear(PedidoRequest req, UsuarioAutenticado yo) {
-        String tipoEntrega = elegir(OpcionesPedido.TIPOS_ENTREGA, req.tipoEntrega(), "tipo de entrega", true);
-        String metodoPago = elegir(OpcionesPedido.METODOS_PAGO, req.metodoPago(), "método de pago", false);
+        TipoEntrega tipoEntrega = catalogo.tipoEntrega(req.tipoEntrega());
+        MetodoPago metodoPago = catalogo.metodoPago(req.metodoPago());
         Usuario usuario = usuarioRepository.findById(yo.id())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
@@ -89,7 +89,7 @@ public class PedidoService {
         pedido.setTipoEntrega(tipoEntrega);
         pedido.setMetodoPago(metodoPago);
         pedido.setFecha(LocalDate.now(ZONA));
-        pedido.setEstado(EstadoPedido.EN_PREPARACION);
+        pedido.setEstado(catalogo.estado(EstadoPedido.EN_PREPARACION));
         pedido.setTotal(total);
 
         pedidoRepository.saveAndFlush(pedido);
@@ -138,7 +138,7 @@ public class PedidoService {
         if (nuevo == EstadoPedido.CANCELADO) {
             devolverStock(p);
         }
-        p.setEstado(nuevo);
+        p.setEstado(catalogo.estado(nuevo));
         return PedidoResponse.desde(p);
     }
 
@@ -153,7 +153,7 @@ public class PedidoService {
             throw new ConflictoException("Solo se puede cancelar un pedido que está En preparación");
         }
         devolverStock(p);
-        p.setEstado(EstadoPedido.CANCELADO);
+        p.setEstado(catalogo.estado(EstadoPedido.CANCELADO));
         return PedidoResponse.desde(p);
     }
 
@@ -173,18 +173,6 @@ public class PedidoService {
     private Pedido buscar(String codigo) {
         return pedidoRepository.findByCodigo(codigo.trim().toUpperCase(Locale.ROOT))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Pedido " + codigo + " no encontrado"));
-    }
-
-    private String elegir(List<String> validos, String valor, String campo, boolean obligatorio) {
-        if (valor == null || valor.isBlank()) {
-            if (obligatorio) {
-                throw new SolicitudInvalidaException("El " + campo + " es obligatorio");
-            }
-            return validos.get(0);
-        }
-        return validos.stream().filter(v -> v.equalsIgnoreCase(valor.trim())).findFirst()
-                .orElseThrow(() -> new SolicitudInvalidaException(
-                        "El " + campo + " no es válido. Opciones: " + String.join(", ", validos)));
     }
 
     public static String codigoDe(Long id) {

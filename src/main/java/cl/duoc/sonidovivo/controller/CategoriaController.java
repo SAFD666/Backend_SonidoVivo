@@ -34,12 +34,19 @@ public class CategoriaController {
         return categoriaService.listar();
     }
 
+    @GetMapping("/slug/{slug}")
+    @Operation(summary = "Ver categoría por slug", description = "Público. Pantalla: /categoria/:slug del frontend.")
+    @ApiResponse(responseCode = "404", description = "No existe", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public CategoriaResponse obtenerPorSlug(@PathVariable String slug) {
+        return categoriaService.obtenerPorSlug(slug);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR','VENDEDOR')")
-    @Operation(summary = "Crear categoría", description = "Administrador o Vendedor. Pantalla: Admin → Categorías.")
-    @ApiResponse(responseCode = "409", description = "Nombre duplicado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @Operation(summary = "Crear categoría", description = "Administrador o Vendedor. El slug se genera solo. Pantalla: Admin → Categorías.")
+    @ApiResponse(responseCode = "409", description = "Nombre o URL duplicados", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public CategoriaResponse crear(@Valid @RequestBody CategoriaRequest req) {
         return categoriaService.crear(req);
     }
@@ -47,9 +54,9 @@ public class CategoriaController {
     @PutMapping("/{id}")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR','VENDEDOR')")
-    @Operation(summary = "Editar / renombrar categoría", description = "Los productos de la categoría quedan con el nuevo nombre.")
+    @Operation(summary = "Editar / renombrar categoría", description = "Los productos de la categoría quedan con el nuevo nombre y el slug se actualiza.")
     @ApiResponse(responseCode = "404", description = "No existe", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "409", description = "Nombre duplicado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Nombre o URL duplicados", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public CategoriaResponse actualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequest req) {
         return categoriaService.actualizar(id, req);
     }
