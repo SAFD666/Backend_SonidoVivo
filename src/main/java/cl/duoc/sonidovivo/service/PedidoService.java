@@ -5,6 +5,7 @@ import cl.duoc.sonidovivo.dto.PedidoRequest;
 import cl.duoc.sonidovivo.dto.PedidoResponse;
 import cl.duoc.sonidovivo.exception.ConflictoException;
 import cl.duoc.sonidovivo.exception.RecursoNoEncontradoException;
+import cl.duoc.sonidovivo.exception.SolicitudInvalidaException;
 import cl.duoc.sonidovivo.model.*;
 import cl.duoc.sonidovivo.repository.PedidoRepository;
 import cl.duoc.sonidovivo.repository.ProductoRepository;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 // Al confirmar se descuenta el stock y al cancelar se devuelve.
 // Un pedido cancelado no puede cambiar a otro estado (409) porque su stock ya fue devuelto.
 // Estado, tipo de entrega y método de pago se leen de sus tablas (CatalogoPedidoService).
+// La dirección es obligatoria para despacho y se guarda en la tabla direccion (UbicacionService).
 @Service
 public class PedidoService {
 
@@ -35,18 +37,26 @@ public class PedidoService {
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
     private final CatalogoPedidoService catalogo;
+    private final UbicacionService ubicacionService;
 
     public PedidoService(PedidoRepository pedidoRepository, ProductoRepository productoRepository,
-                         UsuarioRepository usuarioRepository, CatalogoPedidoService catalogo) {
+                         UsuarioRepository usuarioRepository, CatalogoPedidoService catalogo,
+                         UbicacionService ubicacionService) {
         this.pedidoRepository = pedidoRepository;
         this.productoRepository = productoRepository;
         this.usuarioRepository = usuarioRepository;
         this.catalogo = catalogo;
+        this.ubicacionService = ubicacionService;
     }
 
     @Transactional(readOnly = true)
     public OpcionesPedidoResponse opciones() {
         return new OpcionesPedidoResponse(catalogo.tiposEntrega(), catalogo.metodosPago(), catalogo.estados());
+    }
+
+    // "Retiro en Tienda (Viña del Mar)" no necesita dirección de despacho
+    public static boolean esRetiro(TipoEntrega tipo) {
+        return tipo.getNombre().toLowerCase(Locale.ROOT).startsWith("retiro");
     }
 
     @Transactional
@@ -55,6 +65,14 @@ public class PedidoService {
         MetodoPago metodoPago = catalogo.metodoPago(req.metodoPago());
         Usuario usuario = usuarioRepository.findById(yo.id())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+        Direccion direccion = null;
+        if (!esRetiro(tipoEntrega)) {
+            if (req.direccion() == null) {
+                throw new SolicitudInvalidaException("La dirección es obligatoria para " + tipoEntrega.getNombre());
+            }
+            direccion = ubicacionService.obtenerOCrearDireccion(usuario, req.direccion());
+        }
 
         // Une líneas repetidas del mismo producto y las ordena por código.
         Map<String, Integer> cantidades = new TreeMap<>();
@@ -85,7 +103,7 @@ public class PedidoService {
         pedido.setClienteCorreo(usuario.getCorreo());
         pedido.setClienteNombre(req.nombre().trim());
         pedido.setTelefono(req.telefono().replaceAll("\\s", ""));
-        pedido.setDireccion(req.direccion().trim());
+        pedido.setDireccion(direccion);
         pedido.setTipoEntrega(tipoEntrega);
         pedido.setMetodoPago(metodoPago);
         pedido.setFecha(LocalDate.now(ZONA));

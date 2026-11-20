@@ -6,8 +6,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-// Tabla "pedido": datos del pedido del frontend (fecha, cliente, dirección, teléfono, total e items).
-// Estado, tipo de entrega y método de pago son claves foráneas a sus tablas del DER.
+// Tabla "pedido": datos del pedido del frontend (fecha, cliente, teléfono, total e items).
+// Estado, tipo de entrega, método de pago y dirección son claves foráneas a sus tablas del DER.
 @Entity
 @Table(name = "pedido", uniqueConstraints = @UniqueConstraint(name = "uk_pedido_codigo", columnNames = "codigo"))
 public class Pedido {
@@ -36,8 +36,10 @@ public class Pedido {
     @Column(nullable = false, length = 20)
     private String telefono;
 
-    @Column(nullable = false, length = 200)
-    private String direccion;
+    // Opcional: vacía cuando es "Retiro en Tienda" (relación 0..1 del DER)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_direccion", foreignKey = @ForeignKey(name = "fk_pedido_direccion"))
+    private Direccion direccion;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "id_tipo_entrega", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_tipo_entrega"))
@@ -75,10 +77,11 @@ public class Pedido {
     public void setClienteCorreo(String clienteCorreo) { this.clienteCorreo = clienteCorreo; }
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
-    public String getDireccion() { return direccion; }
-    public void setDireccion(String direccion) { this.direccion = direccion; }
 
-    // Hacia afuera se siguen entregando como texto, igual que antes (el frontend no nota el cambio)
+    // Hacia afuera se sigue entregando como texto, igual que antes (el frontend no nota el cambio)
+    public String getDireccion() { return direccion == null ? "Retiro en tienda" : direccion.texto(); }
+    public void setDireccion(Direccion direccion) { this.direccion = direccion; }
+
     public String getTipoEntrega() { return tipoEntrega.getNombre(); }
     public void setTipoEntrega(TipoEntrega tipoEntrega) { this.tipoEntrega = tipoEntrega; }
     public String getMetodoPago() { return metodoPago.getNombre(); }

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*;
 import java.util.List;
 
 // Datos del checkout del frontend (sin correo, precios, total ni fechas, que calcula el servidor).
+// La dirección va por partes (DER) y es obligatoria salvo en "Retiro en Tienda".
 public record PedidoRequest(
         @Schema(example = "Cliente Prueba", description = "Nombre completo (nombre + apellidos)")
         @NotBlank(message = "El nombre es obligatorio")
@@ -18,10 +19,9 @@ public record PedidoRequest(
         @Pattern(regexp = "^\\+?(\\s*\\d){8,12}\\s*$", message = "Ingresa un teléfono válido (ej: +56912345678)")
         String telefono,
 
-        @Schema(example = "Av. Libertad 450, Viña del Mar")
-        @NotBlank(message = "La dirección es obligatoria")
-        @Size(min = 5, max = 200, message = "La dirección debe tener entre 5 y 200 caracteres")
-        String direccion,
+        @Schema(description = "Obligatoria para despacho; se omite en Retiro en Tienda")
+        @Valid
+        DireccionRequest direccion,
 
         @Schema(example = "Despacho Starken", description = "Retiro en Tienda (Viña del Mar) | Despacho Starken | Despacho Chilexpress")
         @NotBlank(message = "El tipo de entrega es obligatorio")
