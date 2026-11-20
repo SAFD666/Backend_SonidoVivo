@@ -2,13 +2,15 @@ package cl.duoc.sonidovivo.model;
 
 import jakarta.persistence.*;
 
-// Tabla "producto": refleja el objeto del frontend (codigo, nombre, marca, modelo, categoria, stock, precio, imagen, descripcion, esOferta); eliminar desactiva (activo = false) por historial y "version" previene concurrencia en stock.
+// Tabla "producto" del DER: codigo visible unico (GA001), marca y categoria como claves foraneas;
+// eliminar desactiva (activo = false) por historial y "version" previene concurrencia en stock.
 @Entity
 @Table(name = "producto", uniqueConstraints = @UniqueConstraint(name = "uk_producto_codigo", columnNames = "codigo"))
 public class Producto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_producto")
     private Long id;
 
     // Codigo visible (ej. GA001) usado por el frontend como identificador.
@@ -44,7 +46,7 @@ public class Producto {
     private boolean activo = true;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "categoria_id", nullable = false, foreignKey = @ForeignKey(name = "fk_producto_categoria"))
+    @JoinColumn(name = "id_categoria", nullable = false, foreignKey = @ForeignKey(name = "fk_producto_categoria"))
     private Categoria categoria;
 
     @Version

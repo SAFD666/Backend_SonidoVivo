@@ -6,6 +6,7 @@ import cl.duoc.sonidovivo.dto.UsuarioCrearRequest;
 import cl.duoc.sonidovivo.dto.UsuarioResponse;
 import cl.duoc.sonidovivo.exception.ConflictoException;
 import cl.duoc.sonidovivo.exception.RecursoNoEncontradoException;
+import cl.duoc.sonidovivo.model.NombreRol;
 import cl.duoc.sonidovivo.model.Rol;
 import cl.duoc.sonidovivo.model.Usuario;
 import cl.duoc.sonidovivo.repository.RolRepository;
@@ -79,9 +80,6 @@ public class UsuarioService {
         if (req.password() != null) {
             u.setPasswordHash(passwordEncoder.encode(req.password()));
         }
-        if (req.direccion() != null) {
-            u.setDireccion(req.direccion().trim());
-        }
 
         // Rol y estado: solo Administrador (el formulario de usuarios del frontend los edita junto con el resto).
         boolean cambiaRol = req.rol() != null && req.rol() != u.getRol().getNombre();
@@ -141,7 +139,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario " + id + " no encontrado"));
     }
 
-    private Rol buscarRol(cl.duoc.sonidovivo.model.NombreRol nombre) {
+    private Rol buscarRol(NombreRol nombre) {
         return rolRepository.findByNombre(nombre)
                 .orElseThrow(() -> new IllegalStateException("El rol " + nombre + " no existe en la base de datos"));
     }

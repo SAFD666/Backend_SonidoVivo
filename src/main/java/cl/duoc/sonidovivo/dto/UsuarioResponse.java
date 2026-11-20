@@ -11,9 +11,8 @@ public record UsuarioResponse(
         String nombre,
         String correo,
         NombreRol rol,
-        String direccion,
         boolean activo,
-        LocalDateTime fechaCreacion
+        LocalDateTime fechaIngreso
 ) {
     public static UsuarioResponse desde(Usuario u) {
         return new UsuarioResponse(
@@ -21,9 +20,8 @@ public record UsuarioResponse(
                 u.getNombre(),
                 u.getCorreo(),
                 u.getRol().getNombre(),
-                u.getDireccion(),
                 u.isActivo(),
-                u.getFechaCreacion()
+                u.getFechaIngreso()
         );
     }
 }

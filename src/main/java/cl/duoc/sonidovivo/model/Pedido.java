@@ -7,13 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Tabla "pedido": datos del pedido del frontend (fecha, cliente, teléfono, total e items).
-// Estado, tipo de entrega, método de pago y dirección son claves foráneas a sus tablas del DER.
+// Usuario, estado, tipo de entrega, método de pago y dirección son claves foráneas a sus tablas del DER.
 @Entity
 @Table(name = "pedido", uniqueConstraints = @UniqueConstraint(name = "uk_pedido_codigo", columnNames = "codigo"))
 public class Pedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_pedido")
     private Long id;
 
     // Codigo visible (ej. PED-1001) asignado tras insertar como 1000 + id.
@@ -24,9 +25,10 @@ public class Pedido {
     private LocalDate fecha;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_usuario"))
+    @JoinColumn(name = "id_usuario", nullable = false, foreignKey = @ForeignKey(name = "fk_pedido_usuario"))
     private Usuario usuario;
 
+    // Copia del nombre y correo al momento de la compra (el usuario puede cambiarlos después)
     @Column(name = "cliente_nombre", nullable = false, length = 100)
     private String clienteNombre;
 

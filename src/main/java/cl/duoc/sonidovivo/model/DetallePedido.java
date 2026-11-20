@@ -2,21 +2,23 @@ package cl.duoc.sonidovivo.model;
 
 import jakarta.persistence.*;
 
-// Tabla "detalle_pedido": línea de pedido que congela datos del producto (código, nombre, precio) para proteger el historial ante cambios futuros.
+// Tabla "detalle_pedido": línea de pedido que congela datos del producto (código, nombre, precio)
+// para proteger el historial ante cambios futuros.
 @Entity
 @Table(name = "detalle_pedido")
 public class DetallePedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_detalle")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pedido_id", nullable = false, foreignKey = @ForeignKey(name = "fk_detalle_pedido"))
+    @JoinColumn(name = "id_pedido", nullable = false, foreignKey = @ForeignKey(name = "fk_detalle_pedido"))
     private Pedido pedido;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "producto_id", nullable = false, foreignKey = @ForeignKey(name = "fk_detalle_producto"))
+    @JoinColumn(name = "id_producto", nullable = false, foreignKey = @ForeignKey(name = "fk_detalle_producto"))
     private Producto producto;
 
     @Column(nullable = false, length = 20)
