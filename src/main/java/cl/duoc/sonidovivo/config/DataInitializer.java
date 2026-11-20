@@ -12,6 +12,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import cl.duoc.sonidovivo.service.MarcaService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,12 +52,14 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final String demoPassword;
+    private final MarcaService marcaService;
 
     public DataInitializer(RolRepository rolRepository, UsuarioRepository usuarioRepository,
                            CategoriaRepository categoriaRepository, ProductoRepository productoRepository,
                            PedidoRepository pedidoRepository, PasswordEncoder passwordEncoder,
                            ObjectMapper objectMapper,
-                           @Value("${app.seed.demo-password:}") String demoPassword) {
+                            @Value("${app.seed.demo-password:}") String demoPassword,
+                           MarcaService marcaService) {
         this.rolRepository = rolRepository;
         this.usuarioRepository = usuarioRepository;
         this.categoriaRepository = categoriaRepository;
@@ -65,6 +68,7 @@ public class DataInitializer implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
         this.demoPassword = demoPassword;
+        this.marcaService = marcaService;
     }
 
     @Override
@@ -125,7 +129,7 @@ public class DataInitializer implements CommandLineRunner {
             Producto p = new Producto();
             p.setCodigo(s.codigo());
             p.setNombre(s.nombre());
-            p.setMarca(s.marca());
+            p.setMarca(marcaService.obtenerOCrear(s.marca()));
             p.setModelo(s.modelo());
             p.setDescripcion(s.descripcion());
             p.setPrecio(s.precio());

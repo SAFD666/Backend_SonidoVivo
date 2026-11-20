@@ -18,8 +18,9 @@ public class Producto {
     @Column(nullable = false, length = 120)
     private String nombre;
 
-    @Column(nullable = false, length = 60)
-    private String marca;
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "id_marca", nullable = false, foreignKey = @ForeignKey(name = "fk_producto_marca"))
+    private Marca marca;
 
     @Column(length = 60)
     private String modelo;
@@ -54,8 +55,8 @@ public class Producto {
     public void setCodigo(String codigo) { this.codigo = codigo; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
-    public String getMarca() { return marca; }
-    public void setMarca(String marca) { this.marca = marca; }
+    public Marca getMarca() { return marca; }
+    public void setMarca(Marca marca) { this.marca = marca; }
     public String getModelo() { return modelo; }
     public void setModelo(String modelo) { this.modelo = modelo; }
     public String getDescripcion() { return descripcion; }

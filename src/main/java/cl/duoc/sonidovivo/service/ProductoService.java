@@ -22,10 +22,13 @@ public class ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final MarcaService marcaService;
 
-    public ProductoService(ProductoRepository productoRepository, CategoriaRepository categoriaRepository) {
+    public ProductoService(ProductoRepository productoRepository, CategoriaRepository categoriaRepository,
+                           MarcaService marcaService) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
+        this.marcaService = marcaService;
     }
 
     // Lista publica con filtros opcionales: categoria (por nombre), solo ofertas y busqueda por texto.
@@ -38,7 +41,7 @@ public class ProductoService {
                 .filter(p -> soloOfertas == null || !soloOfertas || p.isEsOferta())
                 .filter(p -> q.isEmpty()
                         || p.getNombre().toLowerCase(Locale.ROOT).contains(q)
-                        || p.getMarca().toLowerCase(Locale.ROOT).contains(q)
+                        || p.getMarca().getNombre().toLowerCase(Locale.ROOT).contains(q)
                         || (p.getModelo() != null && p.getModelo().toLowerCase(Locale.ROOT).contains(q))
                         || p.getCodigo().toLowerCase(Locale.ROOT).contains(q))
                 .map(ProductoResponse::desde)
@@ -93,7 +96,7 @@ public class ProductoService {
 
     private void copiarDatos(Producto p, ProductoRequest req, Categoria categoria) {
         p.setNombre(req.nombre().trim());
-        p.setMarca(req.marca().trim());
+        p.setMarca(marcaService.obtenerOCrear(req.marca()));
         p.setModelo(req.modelo() == null ? null : req.modelo().trim());
         p.setDescripcion(req.descripcion() == null ? null : req.descripcion().trim());
         p.setPrecio(req.precio());
