@@ -7,7 +7,7 @@ API REST de la tienda de instrumentos musicales **Sonido Vivo**. Guarda el catá
 | **Asignatura** | DSY1104 – Desarrollo Fullstack II (2026) · Sección 005D |
 | **Equipo 7** | Sebastián Fica · Alonso Valenzuela |
 | **Repositorio frontend** | https://github.com/SAFD666/SonidoVivo |
-| **Documentación viva (Swagger)** | `http://IP_PUBLICA_EC2:8080/swagger-ui.html` (la IP cambia al reiniciar el laboratorio) |
+| **Documentación viva (Swagger)** | `http://IP:8080/swagger-ui.html` (la IP cambia al reiniciar el laboratorio de AWS Academy; se actualiza antes de cada revisión) |
 
 ---
 
