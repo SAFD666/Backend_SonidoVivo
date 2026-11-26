@@ -4,6 +4,7 @@ import cl.duoc.sonidovivo.kaiju.KaijuDtos.LoginRequest;
 import cl.duoc.sonidovivo.kaiju.KaijuDtos.LoginResponse;
 import cl.duoc.sonidovivo.kaiju.KaijuDtos.RegistroRequest;
 import cl.duoc.sonidovivo.kaiju.KaijuDtos.UsuarioResponse;
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class KaijuAuthService {
+
+    private static final String PREFIJO = "Bearer ";
 
     private final UsuarioKaijuRepository repository;
     private final PasswordEncoder passwordEncoder;      // el mismo BCrypt de Sonido Vivo
@@ -24,7 +27,7 @@ public class KaijuAuthService {
         this.jwtService = jwtService;
     }
 
-    // ----- REGISTRO -----
+    // ----- REGISTRO: todo usuario nuevo entra como BODEGA; solo el admin puede cambiarlo -----
     @Transactional
     public UsuarioResponse registrar(RegistroRequest request) {
         String rut = normalizarRut(request.rut());
@@ -45,7 +48,7 @@ public class KaijuAuthService {
                 request.nombreCompleto().trim(),
                 email,
                 passwordEncoder.encode(request.password()),   // se guarda el hash, nunca la contraseña
-                request.rol()
+                RolKaiju.BODEGA                               // rol fijo al registrarse
         );
         return UsuarioResponse.desde(repository.save(usuario));
     }
@@ -59,12 +62,40 @@ public class KaijuAuthService {
                 // mismo mensaje si falla el email o la contraseña: no revela quién está registrado
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email o contraseña incorrectos"));
 
+        // una cuenta desactivada por el admin no puede entrar
+        if (!usuario.isActivo()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tu cuenta está desactivada. Habla con un administrador");
+        }
+
         return new LoginResponse(
                 jwtService.generarToken(usuario),
                 "Bearer",
                 jwtService.getVigenciaSegundos(),
                 UsuarioResponse.desde(usuario)
         );
+    }
+
+    // ----- NUEVO: ¿QUIÉN SOY? La app lo consulta para saber si la sesión sigue válida -----
+    // Lee la base en cada llamada: refleja al instante si el admin desactivó la cuenta o cambió el rol.
+    public UsuarioResponse yo(String authorization) {
+        if (authorization == null || !authorization.startsWith(PREFIJO)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Debes iniciar sesión");
+        }
+        Long id;
+        try {
+            id = jwtService.validar(authorization.substring(PREFIJO.length()).trim());
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tu sesión venció. Inicia sesión otra vez");
+        }
+        UsuarioKaiju usuario = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tu cuenta ya no existe"));
+
+        if (!usuario.isActivo()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tu cuenta fue desactivada por un administrador");
+        }
+        return UsuarioResponse.desde(usuario);
     }
 
     // ----- RUT (mismas reglas que la app: módulo 11) -----

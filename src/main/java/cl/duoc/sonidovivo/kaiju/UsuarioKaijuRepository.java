@@ -8,7 +8,9 @@ public interface UsuarioKaijuRepository extends JpaRepository<UsuarioKaiju, Long
 
     Optional<UsuarioKaiju> findByEmail(String email);    // para el login
 
-    boolean existsByEmail(String email);                 // para no repetir email al registrar
+    boolean existsByEmail(String email);                 // para no repetir email
 
-    boolean existsByRut(String rut);                     // para no repetir RUT al registrar
+    boolean existsByRut(String rut);                     // para no repetir RUT
+
+    boolean existsByRol(RolKaiju rol);                   // NUEVO: ¿ya hay algún administrador?
 }
