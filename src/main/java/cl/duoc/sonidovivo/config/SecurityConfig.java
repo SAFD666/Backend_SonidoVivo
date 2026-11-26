@@ -30,6 +30,8 @@ import java.util.List;
  *  - CSRF desactivado porque el token viaja en el header Authorization, no en una cookie.
  *  - Rutas públicas: login, registro, lectura del catálogo, ubicaciones y Swagger. Todo lo demás requiere token.
  *  - Los permisos por rol se aplican en cada controlador con @PreAuthorize (gracias a @EnableMethodSecurity).
+ *  - La app Kaiju usa su propio token, que este filtro no reconoce: /api/v1/kaiju/auth/** y /api/v1/kaiju/admin/**
+ *    pasan el filtro y el token de Kaiju lo validan KaijuAuthService y KaijuAdminService.
  */
 @Configuration
 @EnableMethodSecurity
@@ -60,6 +62,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                        // App Kaiju: registro, login y "yo" (el token de Kaiju lo valida KaijuAuthService)
+                        .requestMatchers("/api/v1/kaiju/auth/**").permitAll()
+                        // Administración de Kaiju: el token y el rol ADMIN los revisa KaijuAdminService
+                        .requestMatchers("/api/v1/kaiju/admin/**").permitAll()
                         // Catálogo, ubicaciones y opciones del checkout: lectura pública (el frontend las muestra sin iniciar sesión).
                         .requestMatchers(HttpMethod.GET, "/api/v1/productos/**", "/api/v1/categorias/**", "/api/v1/marcas/**",
                                 "/api/v1/regiones/**", "/api/v1/pedidos/opciones").permitAll()
