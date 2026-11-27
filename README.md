@@ -6,8 +6,13 @@ API REST de la tienda de instrumentos musicales **Sonido Vivo**. Guarda el catá
 |---|---|
 | **Asignatura** | DSY1104 – Desarrollo Fullstack II (2026) · Sección 005D |
 | **Equipo 7** | Sebastián Fica · Alonso Valenzuela |
+| **Repositorio backend** | https://github.com/SAFD666/Backend_SonidoVivo |
 | **Repositorio frontend** | https://github.com/SAFD666/SonidoVivo |
-| **Documentación viva (Swagger)** | `http://IP:8080/swagger-ui.html` (la IP cambia al reiniciar el laboratorio de AWS Academy; se actualiza antes de cada revisión) |
+| **API desplegada (Swagger)** | http://107.23.135.231:8080/swagger-ui.html |
+| **Base de la API** | http://107.23.135.231:8080/api/v1 |
+| **Tienda desplegada** | http://107.23.135.231:5173 |
+
+> **Sobre las direcciones públicas:** el servidor es una EC2 de AWS Academy. La IP pública cambia cada vez que se reinicia el laboratorio. Si no responde, hay que pedir al equipo la IP del día. Última IP: **107.23.135.231** (27/11/2026).
 
 ---
 
@@ -43,7 +48,7 @@ Fuera del alcance (se mantienen en el frontend): carrito (`localStorage`), blog 
 
 ![Diagrama Entidad-Relación](docs/der.png)
 
-> Diagrama en Drive: (https://drive.google.com/file/d/1LF-RZrs-NSJGT6zumSQa5icqykCRJvwD/view?usp=sharing)
+> Diagrama y material en Drive: https://drive.google.com/drive/folders/1eXd8NFijBfCoC-25je-nII3zIXDd5BaY?usp=sharing
 
 **13 tablas:** `rol`, `usuario`, `region`, `comuna`, `direccion`, `marca`, `categoria`, `producto`, `estado_pedido`, `tipo_entrega`, `metodo_pago`, `pedido`, `detalle_pedido`. El SQL equivalente está en `db/01_modelo_referencia.sql`.
 
@@ -165,7 +170,7 @@ sequenceDiagram
 | Algoritmo | HS256, clave `JWT_SECRET` de 32+ caracteres en variable de entorno, fuera del repositorio |
 | Campos del token | `sub` (id del usuario), `iss` (`sonido-vivo-api`), `aud` (`sonido-vivo-frontend`), `iat`, `exp` y `rol`. Sin contraseñas ni datos sensibles. |
 | Vigencia | **60 minutos**: suficiente para una compra y limita el daño si el token se filtra. Sin *refresh token*: al vencer se vuelve a iniciar sesión. |
-| En el frontend | El token se guarda **en memoria**; al recargar se pide login de nuevo. |
+| En el frontend | El token se guarda en **`sessionStorage`**; al recargar, `GET /auth/me` recupera la sesión. Se borra al cerrar sesión, al cerrar la pestaña o con un 401. |
 | Cerrar sesión | El frontend borra el token. Una copia ya emitida sigue siendo válida hasta su `exp`. |
 | Cuenta desactivada | En **cada solicitud** se comprueba que el usuario siga activo: sus tokens dejan de servir de inmediato. |
 | Intentos de login | 5 fallos → bloqueo de 5 minutos para ese correo (429). |
@@ -184,7 +189,7 @@ sequenceDiagram
 **Requisitos:** Java 21, acceso a un PostgreSQL (RDS en la misma VPC que la EC2, puerto 5432 abierto solo para el grupo de seguridad de la EC2) y el puerto 8080 abierto en la EC2.
 
 ```bash
-git clone <URL_DE_ESTE_REPOSITORIO> && cd Backend_SonidoVivo
+git clone https://github.com/SAFD666/Backend_SonidoVivo.git && cd Backend_SonidoVivo
 cp .env.example .env        # completar con los valores reales (no se sube a GitHub)
 set -a; source .env; set +a
 ./mvnw spring-boot:run      # o: ./mvnw clean package -DskipTests && java -jar target/*.jar
@@ -221,7 +226,7 @@ set -a; source .env; set +a
 | Admin cambia estado de PED-1002 a Enviado | ✅ 200 |
 | Tablas y FK en PostgreSQL (Database Client) | ✅ 13 tablas con datos iniciales |
 
-**Pendiente:** pruebas de integración con React (carga, error y sesión vencida) y adaptar las pruebas Vitest del frontend.
+**Integración con React (instancia desplegada, http://107.23.135.231:5173):** catálogo, login con recarga, rutas por rol, checkout con Región → Comuna, Mis pedidos, CRUD de productos, categorías y usuarios, y cambio de estado de pedidos. Las pruebas Vitest del frontend simulan los services y pasan todas.
 
 ---
 
@@ -234,11 +239,12 @@ set -a; source .env; set +a
 | Pedidos con regla de stock | ✅ | ✅ | ✅ |
 | Regiones, comunas y direcciones | ✅ | ✅ | ✅ |
 | Modelo igual al DER | ✅ | ✅ | ✅ |
-| Frontend consume la API (Axios) | ✅ | ⏳ | ⏳ |
+| Frontend consume la API (Axios) | ✅ | ✅ | ✅ |
+| Despliegue en EC2 (API :8080 + frontend :5173) | ✅ | ✅ | ✅ |
 
 **Dificultades:** la EC2 `t3.micro` (1 GB) se quedaba sin memoria al compilar → se agregó swap de 2 GB y límites de memoria a Maven/Java. Hibernate no renombra columnas → para cambios de estructura con datos de prueba se recrea el esquema.
 
-**Próximos pasos:** conectar el frontend (services con Axios, TiendaContext, login con token en memoria, checkout con Región → Comuna) y probar todo junto.
+**Próximos pasos:** HTTPS con un dominio propio e IP fija (Elastic IP), y *refresh token* para no pedir login cada 60 minutos.
 
 ---
 
@@ -246,13 +252,13 @@ set -a; source .env; set +a
 
 - [x] Repositorio exclusivo para el backend, separado del frontend.
 - [x] README con proyecto, alcance e integrantes.
-- [ ] Enlace al backend en el README del frontend.
+- [x] Enlace al backend en el README del frontend.
 - [x] Tecnología, ejecución en EC2 y motor de base de datos justificados.
-- [x] Diagrama entidad-relación actualizado. [ ] Enlace de Drive con acceso de lectura.
+- [x] Diagrama entidad-relación actualizado y enlace de Drive con acceso de lectura.
 - [x] Responsabilidades del backend y del equipo.
 - [x] Estructura, conexión a datos y endpoints implementados.
 - [x] API documentada con Swagger.
-- [ ] Integración con el frontend.
+- [x] Integración con el frontend y despliegue con direcciones públicas.
 - [x] Protección de contraseñas investigada y justificada.
 - [x] Flujo JWT, permisos y diagrama de secuencia, con casos de rechazo.
 - [x] Pruebas reales registradas y pendientes separados.
